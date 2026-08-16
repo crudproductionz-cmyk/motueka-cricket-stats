@@ -1,313 +1,221 @@
-import streamlit as st
-import pandas as pd
-from pathlib import Path
+const players = [
+  {id:"JS001", name:"John Smith", detail:"Motueka Premier", initials:"JS"},
+  {id:"JS002", name:"John Smith", detail:"Riwaka Premier", initials:"JS"},
+  {id:"AB001", name:"Alex Brown", detail:"Motueka Premier", initials:"AB"},
+  {id:"LM001", name:"Liam McKenzie", detail:"Motueka Reserve", initials:"LM"}
+];
 
-st.set_page_config(
-    page_title="Motueka Cricket Statistics",
-    page_icon="🏏",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+const records = {
+  JS001: {
+    formats:["T20","One Day"], grades:["Premier"], teams:["Motueka"], seasons:["2025/26","2024/25"],
+    batting:{matches:30,innings:28,no:5,hs:"112*",runs:1353,ave:"58.83",sr:"114.2",hundreds:5,fifties:6,fours:109,sixes:28},
+    bowling:{innings:24,overs:"103.2",maidens:11,runs:1010,wickets:56,ave:"18.04",sr:"11.07",bbi:"5/24",bbm:"7/52",fiveWi:3,tenWm:0,rpo:"9.77"},
+    fielding:{catches:27,wk:4,stumpings:1}
+  },
+  JS002: {
+    formats:["T20"], grades:["Premier"], teams:["Riwaka"], seasons:["2025/26"],
+    batting:{matches:16,innings:15,no:1,hs:"96",runs:731,ave:"52.21",sr:"110.4",hundreds:2,fifties:5,fours:68,sixes:21},
+    bowling:{innings:12,overs:"90.0",maidens:5,runs:510,wickets:27,ave:"18.89",sr:"20.00",bbi:"5/19",bbm:"7/44",fiveWi:2,tenWm:0,rpo:"5.67"},
+    fielding:{catches:13,wk:0,stumpings:0}
+  },
+  AB001: {
+    formats:["T20","One Day"], grades:["Premier"], teams:["Motueka"], seasons:["2025/26","2024/25"],
+    batting:{matches:26,innings:24,no:5,hs:"121",runs:1371,ave:"72.16",sr:"121.8",hundreds:5,fifties:8,fours:136,sixes:31},
+    bowling:{innings:17,overs:"55.0",maidens:5,runs:740,wickets:39,ave:"18.97",sr:"8.46",bbi:"4/22",bbm:"5/48",fiveWi:1,tenWm:0,rpo:"13.45"},
+    fielding:{catches:20,wk:0,stumpings:2}
+  },
+  LM001: {
+    formats:["T20"], grades:["Reserve"], teams:["Motueka"], seasons:["2025/26"],
+    batting:{matches:14,innings:13,no:2,hs:"74",runs:388,ave:"35.27",sr:"104.2",hundreds:0,fifties:3,fours:39,sixes:8},
+    bowling:{innings:13,overs:"78.2",maidens:6,runs:480,wickets:29,ave:"16.55",sr:"16.21",bbi:"4/28",bbm:"6/55",fiveWi:0,tenWm:0,rpo:"6.13"},
+    fielding:{catches:11,wk:0,stumpings:0}
+  }
+};
 
-# -----------------------------
-# Styling
-# -----------------------------
-st.markdown("""
-<style>
-.stApp { background: #eef4f5; }
+let state = {page:"home",playerId:null,tab:"batting",format:"All",grade:"All",team:"All",season:"All"};
+const app = document.getElementById("app");
 
-.hero {
-    min-height: 360px;
-    padding: 32px;
-    border-radius: 18px;
-    background:
-      linear-gradient(rgba(15,18,18,.40), rgba(15,18,18,.48)),
-      url("https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1600&q=80");
-    background-size: cover;
-    background-position: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    color: white;
-    margin-bottom: 24px;
-}
-.hero h1 { font-size: 2.5rem; margin: 0; }
-.hero p { font-size: 1.05rem; margin: 5px 0 0; }
-
-div[data-testid="stMetric"] {
-    background: #f4bd22;
-    border-radius: 12px;
-    padding: 12px;
-}
-
-.stat-card {
-    background: #f4bd22;
-    border-radius: 12px;
-    padding: 15px;
-    text-align: center;
-    min-height: 90px;
-    margin-bottom: 12px;
-}
-.stat-label { font-weight: 700; font-size: .9rem; }
-.stat-value { font-size: 1.65rem; font-weight: 800; margin-top: 5px; }
-
-.player-banner {
-    background: #f4bd22;
-    border-radius: 14px;
-    padding: 14px 20px;
-    margin-bottom: 15px;
-}
-.player-banner .name { font-size: 1.5rem; font-weight: 800; }
-.player-banner .sub { font-size: .9rem; }
-
-div[data-baseweb="select"] > div {
-    border-radius: 10px;
+function playerById(id){ return players.find(p => p.id === id); }
+function currentRecord(){ return records[state.playerId]; }
+function optionValues(key){
+  const r=currentRecord();
+  return r ? ["All", ...r[key + "s"]] : ["All"];
 }
 
-.stButton > button {
-    border-radius: 10px;
-    font-weight: 700;
+function render(){
+  if(state.page === "home") renderHome();
+  else renderStats();
 }
-</style>
-""", unsafe_allow_html=True)
 
-# -----------------------------
-# Data
-# -----------------------------
-@st.cache_data
-def load_data():
-    return pd.read_csv(Path("data/stats.csv"))
+function renderHome(){
+  app.innerHTML = `
+    <main class="home">
+      <div class="hero">
+        <div class="hero-overlay">
+          <div class="club-pill">MOTUEKA CRICKET CLUB</div>
+          <h1>Find a<br><span>Player</span></h1>
+          <p>Player statistics · Est. 1857</p>
+        </div>
+      </div>
+      <section class="search-panel">
+        <label for="playerSearch">PLAYER SEARCH</label>
+        <div class="search-wrap">
+          <span>⌕</span>
+          <input id="playerSearch" autocomplete="off" placeholder="Type a player's name..." />
+        </div>
+        <div id="results" class="results"></div>
+      </section>
+      <p class="hint">Select a player to view their profile and statistics.</p>
+    </main>`;
 
-df = load_data()
+  const input = document.getElementById("playerSearch");
+  const results = document.getElementById("results");
 
-# -----------------------------
-# Session state
-# -----------------------------
-if "page" not in st.session_state:
-    st.session_state.page = "Home"
-if "player_id" not in st.session_state:
-    st.session_state.player_id = None
+  function showResults(){
+    const q = input.value.trim().toLowerCase();
+    const matches = players.filter(p =>
+      !q || (p.name + " " + p.detail).toLowerCase().includes(q)
+    );
 
-for key in ["format", "grade", "team", "season"]:
-    if key not in st.session_state:
-        st.session_state[key] = "All"
+    results.innerHTML = matches.map(p => `
+      <button class="player-result" data-id="${p.id}">
+        <span class="avatar">${p.initials}</span>
+        <span class="player-copy"><strong>${p.name}</strong><small>${p.detail}</small></span>
+        <span class="arrow">›</span>
+      </button>
+    `).join("");
 
-# -----------------------------
-# Helpers
-# -----------------------------
-def options(column):
-    vals = sorted(df[column].dropna().astype(str).unique()) if column in df else []
-    return ["All"] + vals
+    results.querySelectorAll(".player-result").forEach(button => {
+      button.onclick = () => {
+        state.playerId = button.dataset.id;
+        state.page = "stats";
+        state.tab = "batting";
+        render();
+      };
+    });
+  }
 
-def filtered_player_data():
-    out = df[df["Player ID"] == st.session_state.player_id].copy()
-    for state_key, column in [
-        ("format", "Format"),
-        ("grade", "Grade"),
-        ("team", "Team"),
-        ("season", "Season"),
-    ]:
-        value = st.session_state[state_key]
-        if value != "All":
-            out = out[out[column].astype(str) == value]
-    return out
+  input.oninput = showResults;
+  input.focus();
+  showResults();
+}
 
-def total(data, col):
-    return data[col].sum() if col in data.columns else 0
+function filter(key,label){
+  const vals = optionValues(key);
+  if(!vals.includes(state[key])) state[key] = "All";
+  return `
+    <label class="filter">
+      <span>${label}</span>
+      <select class="filter-select" data-key="${key}">
+        ${vals.map(v => `<option ${v === state[key] ? "selected" : ""}>${v}</option>`).join("")}
+      </select>
+    </label>`;
+}
 
-def safe_div(a, b, digits=2):
-    return round(a / b, digits) if b else 0
+function tab(key,label){
+  return `<button class="tab ${state.tab === key ? "active" : ""}" data-tab="${key}">${label}</button>`;
+}
 
-def show_cards(stats, per_row=3):
-    for start in range(0, len(stats), per_row):
-        cols = st.columns(per_row)
-        for col, (label, value) in zip(cols, stats[start:start + per_row]):
-            with col:
-                st.markdown(
-                    f'<div class="stat-card">'
-                    f'<div class="stat-label">{label}</div>'
-                    f'<div class="stat-value">{value}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+function stat(label,value){
+  return `<div class="stat-row"><span>${label}</span><strong>${value}</strong></div>`;
+}
 
-# -----------------------------
-# Navigation
-# -----------------------------
-if st.session_state.page != "Home":
-    left, right = st.columns([1, 5])
-    with left:
-        if st.button("← Home", use_container_width=True):
-            st.session_state.page = "Home"
-            st.rerun()
+function batting(s){
+  return `
+    <div class="section-title">BATTING</div>
+    <div class="stat-list">
+      ${stat("MATCHES",s.matches)}
+      ${stat("INNINGS",s.innings)}
+      ${stat("NO",s.no)}
+      ${stat("HS",s.hs)}
+      ${stat("RUNS",s.runs.toLocaleString())}
+      ${stat("AVE",s.ave)}
+      ${stat("S/R",s.sr)}
+      ${stat("100",s.hundreds)}
+      ${stat("50",s.fifties)}
+      ${stat("4s",s.fours)}
+      ${stat("6s",s.sixes)}
+    </div>`;
+}
 
-# -----------------------------
-# PAGE 1 — HOME
-# -----------------------------
-if st.session_state.page == "Home":
-    st.markdown("""
-    <div class="hero">
-        <h1>Motueka Cricket Club</h1>
-        <p>Player Statistics • Est. 1857</p>
-    </div>
-    """, unsafe_allow_html=True)
+function bowling(s){
+  return `
+    <div class="section-title">BOWLING</div>
+    <div class="stat-list">
+      ${stat("BOWLING INNINGS",s.innings)}
+      ${stat("OVERS",s.overs)}
+      ${stat("MAIDENS",s.maidens)}
+      ${stat("RUNS",s.runs.toLocaleString())}
+      ${stat("WICKETS",s.wickets)}
+      ${stat("AVE",s.ave)}
+      ${stat("S/R",s.sr)}
+      ${stat("BBI",s.bbi)}
+      ${stat("BBM",s.bbm)}
+      ${stat("5WI",s.fiveWi)}
+      ${stat("10WM",s.tenWm)}
+      ${stat("RPO",s.rpo)}
+    </div>`;
+}
 
-    st.markdown("### Find a player")
+function fielding(s){
+  return `
+    <div class="section-title">FIELDING</div>
+    <div class="stat-list">
+      ${stat("OUTFIELD CATCHES",s.catches)}
+      ${stat("WICKET KEEPER CATCHES",s.wk)}
+      ${stat("STUMPINGS",s.stumpings)}
+    </div>`;
+}
 
-    # Display name is deliberately NOT just first + last name.
-    # This allows duplicate names to be distinguished.
-    player_choices = [""] + sorted(
-        df["Player ID"].unique(),
-        key=lambda pid: df.loc[df["Player ID"] == pid, "Display Name"].iloc[0]
-    )
+function renderStats(){
+  const p = playerById(state.playerId);
+  const r = currentRecord();
 
-    display_map = {
-        pid: df.loc[df["Player ID"] == pid, "Display Name"].iloc[0]
-        for pid in df["Player ID"].unique()
-    }
+  app.innerHTML = `
+    <main class="stats-page">
+      <header class="topbar">
+        <button class="back" id="changePlayer">←</button>
+        <div class="brand">MOTUEKA <span>CRICKET</span></div>
+        <button class="home-icon" id="homeBtn">⌂</button>
+      </header>
 
-    selected_id = st.selectbox(
-        "Player name",
-        player_choices,
-        index=player_choices.index(st.session_state.player_id)
-        if st.session_state.player_id in player_choices else 0,
-        format_func=lambda pid: "" if pid == "" else display_map[pid],
-        placeholder="Start typing a player name...",
-        label_visibility="collapsed",
-    )
+      <section class="profile-head">
+        <div class="profile-avatar">${p.initials}</div>
+        <div>
+          <div class="eyebrow">PLAYER PROFILE</div>
+          <h1>${p.name}</h1>
+          <p>${p.detail}</p>
+        </div>
+      </section>
 
-    # Selecting a player immediately opens Page 2.
-    if selected_id:
-        st.session_state.player_id = selected_id
-        st.session_state.page = "Statistics"
-        st.rerun()
+      <section class="filters">
+        ${filter("format","FORMAT")}
+        ${filter("grade","GRADE")}
+        ${filter("team","TEAM")}
+        ${filter("season","SEASON")}
+      </section>
 
-    st.caption("Start typing a name, then click the required player. Duplicate names are distinguished by team/grade.")
+      <nav class="tabs">
+        ${tab("batting","BAT 🏏")}
+        ${tab("bowling","BOWL 🎯")}
+        ${tab("fielding","FIELD 🧤")}
+      </nav>
 
-# -----------------------------
-# PAGE 2 — PROFILE + TABS
-# -----------------------------
-else:
-    pid = st.session_state.player_id
-    player = df[df["Player ID"] == pid]
+      <section class="stats-content">
+        ${state.tab === "batting" ? batting(r.batting) : state.tab === "bowling" ? bowling(r.bowling) : fielding(r.fielding)}
+      </section>
+    </main>`;
 
-    if player.empty:
-        st.session_state.page = "Home"
-        st.rerun()
+  document.getElementById("changePlayer").onclick = () => { state.page = "home"; render(); };
+  document.getElementById("homeBtn").onclick = () => { state.page = "home"; render(); };
 
-    display_name = player["Display Name"].iloc[0]
-    st.markdown(
-        f'<div class="player-banner">'
-        f'<div class="name">{display_name}</div>'
-        f'<div class="sub">Player Profile & Statistics</div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+  document.querySelectorAll(".tab").forEach(el => {
+    el.onclick = () => { state.tab = el.dataset.tab; render(); };
+  });
 
-    # Persistent filters. They stay in session state when switching tabs.
-    st.markdown("#### Filters")
-    f1, f2, f3, f4 = st.columns(4)
+  document.querySelectorAll(".filter-select").forEach(el => {
+    el.onchange = () => { state[el.dataset.key] = el.value; render(); };
+  });
+}
 
-    with f1:
-        opts = options("Format")
-        st.session_state.format = st.selectbox(
-            "Format", opts,
-            index=opts.index(st.session_state.format)
-            if st.session_state.format in opts else 0,
-            key="format_widget"
-        )
-    with f2:
-        opts = options("Grade")
-        st.session_state.grade = st.selectbox(
-            "Grade", opts,
-            index=opts.index(st.session_state.grade)
-            if st.session_state.grade in opts else 0,
-            key="grade_widget"
-        )
-    with f3:
-        opts = options("Team")
-        st.session_state.team = st.selectbox(
-            "Team", opts,
-            index=opts.index(st.session_state.team)
-            if st.session_state.team in opts else 0,
-            key="team_widget"
-        )
-    with f4:
-        opts = options("Season")
-        st.session_state.season = st.selectbox(
-            "Season", opts,
-            index=opts.index(st.session_state.season)
-            if st.session_state.season in opts else 0,
-            key="season_widget"
-        )
-
-    data = filtered_player_data()
-
-    st.markdown("---")
-
-    # These are tabs, not separate pages.
-    batting_tab, bowling_tab, fielding_tab = st.tabs(
-        ["🏏 Batting", "🎯 Bowling", "🧤 Fielding"]
-    )
-
-    with batting_tab:
-        innings = total(data, "Innings")
-        runs = total(data, "Runs")
-        not_outs = total(data, "Not Outs")
-        balls = total(data, "Balls Faced")
-
-        batting_stats = [
-            ("Matches", f"{total(data, 'Matches'):,.0f}"),
-            ("Innings", f"{innings:,.0f}"),
-            ("NO", f"{not_outs:,.0f}"),
-            ("HS", f"{data['HS'].max():,.0f}" if "HS" in data and len(data) else "—"),
-            ("Runs", f"{runs:,.0f}"),
-            ("Ave", f"{safe_div(runs, innings - not_outs):.2f}"),
-            ("S/R", f"{safe_div(runs * 100, balls):.2f}"),
-            ("100", f"{total(data, '100s'):,.0f}"),
-            ("50", f"{total(data, '50s'):,.0f}"),
-            ("4s", f"{total(data, '4s'):,.0f}"),
-            ("6s", f"{total(data, '6s'):,.0f}"),
-        ]
-        show_cards(batting_stats)
-
-    with bowling_tab:
-        balls = total(data, "Bowling Balls")
-        wickets = total(data, "Wickets")
-        runs = total(data, "Bowling Runs")
-
-        # Cricket overs are displayed as balls/6 plus remaining balls.
-        overs = f"{balls // 6}.{balls % 6}"
-
-        bowling_stats = [
-            ("Bowling Innings", f"{total(data, 'Bowling Innings'):,.0f}"),
-            ("Overs", overs),
-            ("Maidens", f"{total(data, 'Maidens'):,.0f}"),
-            ("Runs", f"{runs:,.0f}"),
-            ("Wickets", f"{wickets:,.0f}"),
-            ("Ave", f"{safe_div(runs, wickets):.2f}"),
-            ("S/R", f"{safe_div(balls, wickets):.2f}"),
-            ("BBI", str(data["BBI"].iloc[0]) if "BBI" in data and len(data) else "—"),
-            ("BBM", str(data["BBM"].iloc[0]) if "BBM" in data and len(data) else "—"),
-            ("5WI", f"{total(data, '5WI'):,.0f}"),
-            ("10WM", f"{total(data, '10WM'):,.0f}"),
-            ("RPO", f"{safe_div(runs * 6, balls):.2f}"),
-        ]
-        show_cards(bowling_stats)
-
-    with fielding_tab:
-        fielding_stats = [
-            ("Outfield Catches", f"{total(data, 'Catches'):,.0f}"),
-            ("Wicket Keeper Catches", f"{total(data, 'WK Catches'):,.0f}"),
-            ("Stumpings", f"{total(data, 'Stumpings'):,.0f}"),
-        ]
-        show_cards(fielding_stats)
-
-    with st.expander("Show underlying sample data"):
-        st.dataframe(data, use_container_width=True, hide_index=True)
-
-    if st.button("Change player"):
-        st.session_state.page = "Home"
-        st.rerun()
-
-st.caption("Sample-data prototype — ready to connect to the real cricket spreadsheet.")
+render();

@@ -1,0 +1,9 @@
+{
+  "name":"Motueka Cricket Statistics",
+  "short_name":"Motueka Cricket",
+  "start_url":".",
+  "display":"standalone",
+  "background_color":"#151718",
+  "theme_color":"#151718",
+  "description":"Motueka Cricket Club player statistics"
+}
